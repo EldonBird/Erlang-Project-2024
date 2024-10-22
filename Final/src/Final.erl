@@ -1,3 +1,0 @@
--module(Final).
-
--export([]).
