@@ -1,0 +1,98 @@
+-module(final).
+-export([start_chat_room/0, broadcast_message/2, user_input/1, mailbox/0, open_mail_box/2]).
+
+
+
+
+
+start_chat_room() ->
+    PID = spawn(?MODULE, chat_room_server, []),
+    global:register_name("chatroom", PID).
+
+
+
+chat_room_server(Users, ChatLog) ->
+
+    CurrentLog = ChatLog,
+    CurrentUserList = Users,
+
+    receive
+        {UserPID, Message} when is_list(Message)->
+
+            CurrentUserList = lists:append(Users, [UserPID]),
+            CurrentLog = lists:append(ChatLog, [{UserPID, Message}]),
+
+            broadcast_message(Message, CurrentUserList);
+
+        {UserPID, Message} when is_boolean(Message) ->
+            CurrentUserList = lists:append(Users, [UserPID]),
+            open_mail_box(ChatLog, UserPID)
+
+end,
+chat_room_server(CurrentUserList, CurrentLog).
+
+
+
+open_mail_box(ChatLog, User) ->
+    User ! {ChatLog}.
+
+
+
+
+broadcast_message(Msg, [Pid|Pids]) ->
+
+    Pid ! Msg,
+
+    broadcast_message(Msg, Pids);
+
+broadcast_message(_, []) ->
+    true.
+
+
+    
+
+
+user_server(MessageLogs) ->
+
+    Pid = global:whereis_name("chat_room_server"),
+
+
+
+    receive
+        {UserInputPID, Message} ->
+            Pid ! {self(), Message}
+        
+
+end,
+
+user_server(MessageLogs).
+
+
+user_input(Message) ->
+
+    Pid = global:whereis_name("chat_room_server"),
+
+    Pid ! {self(), Message},
+
+    receive
+      Response ->
+        Response
+    end.
+
+mailbox() ->
+    Pid = global:whereis_name("chat_room_server"),
+
+    Pid ! {self(), true},
+
+    receive
+      Response ->
+        Response
+    end.
+    
+
+
+
+
+    
+
+
